@@ -1,55 +1,71 @@
 import cn.marklux.memory.RamUsageEstimator;
 import org.junit.Test;
+import org.openjdk.jol.info.ClassLayout;
+import sun.misc.Unsafe;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
 public class RamUsageEstimatorTest {
 
     @Test
-    public void testRamEstimate() {
-        Pojo pojo = new Pojo();
-        List<Integer> numbers = new ArrayList<>();
-        numbers.add(1);
-        pojo.setNumbers(numbers);
-        pojo.setName("mark");
-        pojo.setLabel("label");
-        System.out.println(RamUsageEstimator.sizeOf(pojo));
-        pojo.getNumbers().add(11000);
-        System.out.println(RamUsageEstimator.sizeOf(pojo));
+    public void testRamMap() {
+        System.out.println(ClassLayout.parseClass(Pojo.class).toPrintable());
+
+    }
+
+    @Test
+    public void testSize() {
+        Pojo p = new Pojo();
+        System.out.println(RamUsageEstimator.sizeOf(p));
+    }
+
+    @Test
+    public void testUnsafe() throws Exception {
+        Class<?> unsafeClass = null;
+        Unsafe unsafe = null;
+        try {
+            unsafeClass = Class.forName("sun.misc.Unsafe");
+            final Field unsafeField = unsafeClass.getDeclaredField("theUnsafe");
+            unsafeField.setAccessible(true);
+            unsafe = (Unsafe) unsafeField.get(null);
+        } catch (Exception e) {
+            // Ignore.
+        }
+        Pojo p = new Pojo();
+        Field f = Pojo.class.getDeclaredField("e");
+        long eOffset = unsafe.objectFieldOffset(f);
+        System.out.println(eOffset);
+        if (eOffset > 0L) {
+            long eVal = unsafe.getLong(p, eOffset);
+            System.out.println(eVal); // 1024
+        }
     }
 
 
     static class Pojo {
+        public int a;
+        public String b;
+        public int c;
+        public boolean d;
+        private long e;
+        public Object f;
 
-        private String name;
+        public Pojo() {
+            e = 1024;
+        }
+    }
 
-        private String label;
+    static class Int {
+        private int val;
 
-        private List<Integer> numbers;
-
-        public String getName() {
-            return name;
+        public int getVal() {
+            return val;
         }
 
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public String getLabel() {
-            return label;
-        }
-
-        public void setLabel(String label) {
-            this.label = label;
-        }
-
-        public List<Integer> getNumbers() {
-            return numbers;
-        }
-
-        public void setNumbers(List<Integer> numbers) {
-            this.numbers = numbers;
+        public void setVal(int val) {
+            this.val = val;
         }
     }
 }
